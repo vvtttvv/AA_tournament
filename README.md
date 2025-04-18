@@ -4,49 +4,65 @@
 #### **Overview**  
 Adaptive Retaliator is a dynamic strategy designed for the Iterated Prisoner's Dilemma tournament. It balances cooperation and retaliation by analyzing the opponent's past behavior and adjusting its responses accordingly.  
 
-#### **How It Works**  
+#### **How It Works (Round 1)**  
 - **Starts with cooperation** to test the opponent.  
 - **Retaliates if the opponent defects twice in a row.**  
 - **Monitors opponent’s defection rate** – if they defect more than 50% of the time, we also defect.  
 - **Uses strategic deception** – after 10 defections, it cooperates briefly to trick exploiters.  
 - **Defects in the last round** to maximize points.  
 
-#### **Code Implementation**  
+#### **Round 2 Enhancements**  
+In the second part of the tournament, Adaptive Retaliator also **chooses who to play with next**, using smart heuristics:  
+- **Avoids opponents with whom we've already played 200 rounds.**  
+- **Prefers opponents with high cooperation rates.**  
+- **If no better choice is available, continues playing with the current opponent.**
+
+#### **Code Implementation (Round 2)**  
 ```python
-def strategy(my_history: list[int], opponent_history: list[int], rounds: int | None) -> int:
-    if not opponent_history:  
-        return 1  # Cooperate first move
+def strategy_round_2(opponent_id: int, my_history: dict[int, list[int]], opponents_history: dict[int, list[int]]) -> tuple[int, int]:
+    my_moves = my_history.get(opponent_id, [])
+    opponent_moves = opponents_history.get(opponent_id, [])
+    
+    if not opponent_moves:
+        move = 1
+    else:
+        total_rounds = len(opponent_moves)
+        opponent_defects = opponent_moves.count(0)
+        my_defects = my_moves.count(0)
 
-    total_rounds = len(opponent_history)
-    opponent_defects = opponent_history.count(0)
-    my_defects = my_history.count(0)
+        if total_rounds >= 2 and opponent_moves[-1] == 0 and opponent_moves[-2] == 0:
+            move = 0
+        elif opponent_defects / total_rounds > 0.5:
+            move = 0
+        elif my_defects >= 10 and my_moves[-2:].count(0) < 2:
+            move = 1
+        elif total_rounds == 199:
+            move = 0
+        else:
+            move = 1
 
-    # If the opponent defected in the last two rounds, retaliate
-    if total_rounds >= 2 and opponent_history[-1] == 0 and opponent_history[-2] == 0:
-        return 0  
+    available_opponents = [pid for pid in opponents_history if len(my_history.get(pid, [])) < 200]
+    
+    def cooperation_score(pid):
+        opp = opponents_history[pid]
+        return opp.count(1) / len(opp) if opp else 1.0
 
-    # If the opponent defects more than 50% of rounds, increase defections
-    if opponent_defects / total_rounds > 0.5:
-        return 0  
+    available_opponents.sort(key=cooperation_score, reverse=True)
 
-    # If we have defected 10 times, briefly cooperate to reset expectations
-    if my_defects >= 10 and my_history[-2:].count(0) < 2:
-        return 1  
+    next_opponent = available_opponents[0] if available_opponents else opponent_id
 
-    # If it's the last round, defect for maximum gain
-    if rounds is not None and total_rounds == rounds - 1:
-        return 0  
-
-    return 1  # Default to cooperation
+    return move, next_opponent
 ```
 
 #### **Why This Strategy Works**  
 ✅ **Adaptive** – It changes based on opponent behavior.  
 ✅ **Unpredictable** – The mix of cooperation and defection prevents easy exploitation.  
-✅ **Strategically aggressive** – Punishes frequent defectors while rewarding cooperators.  
-✅ **Tournament-ready** – Optimized for long-term scoring, not just short-term revenge.  
+✅ **Opponent-selective** – In Round 2, it avoids toxic players and seeks the most beneficial ones.  
+✅ **Tournament-ready** – Optimized for long-term scoring and multi-agent dynamics.
 
 #### **Submission Guidelines**  
-- Ensure the file is named **adaptive_retaliator.py** before submission.  
+- Ensure the file is named:  
+  **`titerez_vladislav_adaptive_retaliator_round_2.py`**  
 - No debugging prints or extra comments should be included in the final version.  
-- Test thoroughly before submitting!  
+- Submit to the **same GitHub repo as Round 1**, and commit before **April 27, 23:59**.  
+- Include this README in the repo to explain your logic.
